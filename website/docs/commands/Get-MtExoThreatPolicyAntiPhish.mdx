@@ -1,0 +1,67 @@
+---
+sidebar_class_name: hidden
+description: Retrieves cached and extended (priority, enabled) of 'Get-MtExo -Request MalwareFilterPolicy'
+id: Get-MtExoThreatPolicyAntiPhish
+title: Get-MtExoThreatPolicyAntiPhish
+hide_title: false
+hide_table_of_contents: false
+custom_edit_url: https://github.com/maester365/maester/blob/main/powershell/public/Get-MtExoThreatPolicyAntiPhish.ps1
+---
+
+## SYNOPSIS
+
+Retrieves cached and extended (priority, enabled) of 'Get-MtExo -Request ThreatPolicyAntiPhish'
+
+## SYNTAX
+
+```powershell
+Get-MtExoThreatPolicyAntiPhish [-ProgressAction <ActionPreference>] [<CommonParameters>]
+```
+
+## DESCRIPTION
+
+Helper to make use of 'Get-MtExo -Request ThreatPolicyAntiPhish' easier
+
+## EXAMPLES
+
+### EXAMPLE 1
+
+```powershell
+Get-MtExoThreatPolicyAntiPhish
+```
+
+Returns anti phish policies sorted by priority with added IsEnabled and Priority properties
+
+## PARAMETERS
+
+### -ProgressAction
+
+\{\{ Fill ProgressAction Description \}\}
+
+```yaml
+Type: ActionPreference
+Parameter Sets: (All)
+Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### CommonParameters
+
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
+
+## INPUTS
+
+## OUTPUTS
+
+### System.Object
+
+## NOTES
+
+## RELATED LINKS
+
+[https://maester.dev/docs/commands/Get-MtExoThreatPolicyAntiPhish](https://maester.dev/docs/commands/Get-MtExoThreatPolicyAntiPhish)
