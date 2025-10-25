@@ -21,63 +21,40 @@ function Test-MtCisaMailboxIntelligence {
     if (!(Test-MtConnection ExchangeOnline)) {
         Add-MtTestResultDetail -SkippedBecause NotConnectedExchange
         return $null
-    } elseif (!(Test-MtConnection SecurityCompliance)) {
-        Add-MtTestResultDetail -SkippedBecause NotConnectedSecurityCompliance
-        return $null
     } elseif ("P1" -notin (Get-MtLicenseInformation -Product MdoV2)) {
         Add-MtTestResultDetail -SkippedBecause NotLicensedMdoP1
         return $null
     }
 
-    $policies = Get-MtExo -Request AntiPhishPolicy
-
-    $resultPolicies = $policies | Where-Object { `
+    $policies = Get-MtExoThreatPolicyAntiPhish
+    $failingPolicies = $policies | Where-Object { `
         $_.Enabled -and `
-        $_.EnableMailboxIntelligence -and `
-        $_.EnableMailboxIntelligenceProtection
+        -not ($_.EnableMailboxIntelligence -and $_.EnableMailboxIntelligenceProtection)
     }
+    $testResult = ($failingPolicies | Measure-Object).Count -eq 0
 
-    $standard = $policies | Where-Object { `
-        $_.RecommendedPolicyType -eq "Standard"
+    $portalLink = "https://security.microsoft.com/antiphishing"
+    $passResult = "✅&nbsp;Pass"
+    $failResult = "❌&nbsp;Fail"
+    $skipResult = "🗄️&nbsp;Skip"
+
+    $result = "| Policy name | Enabled | Enable Mailbox Intelligence | Enable Mailbox Intelligence Protection | Result |`n"
+    $result += "| --- | --- | --- | --- | --- |`n"
+    foreach ($item in $policies) {
+        $itemResult = if (-not $item.IsEnabled) {
+            $skipResult
+        } elseif ($item.EnableMailboxIntelligence -and $item.EnableMailboxIntelligenceProtection) {
+            $passResult
+        } else {
+            $failResult
+        }
+        $result += "| $($item.Identity) | $($item.IsEnabled) | $($item.EnableMailboxIntelligence) | $($item.EnableMailboxIntelligenceProtection) | $itemResult |`n"
     }
-
-    $strict = $policies | Where-Object { `
-        $_.RecommendedPolicyType -eq "Strict"
-    }
-
-    $testResult = $standard -and $strict -and (($resultPolicies|Measure-Object).Count -ge 1)
-
-    $portalLink = "https://security.microsoft.com/presetSecurityPolicies"
-    $passResult = "✅ Pass"
-    $failResult = "❌ Fail"
 
     if ($testResult) {
-        $testResultMarkdown = "Well done. Your tenant has [standard and strict preset security policies for the common file filter]($portalLink).`n`n%TestResult%"
+        $testResultMarkdown = "Well done. All the enabled anti-phish policies in your tenant have the EnableMailboxIntelligence and EnableMailboxIntelligenceProtection enabled ($portalLink).`n`n%TestResult%"
     } else {
-        $testResultMarkdown = "Your tenant does not have [standard and strict preset security policies enabled]($portalLink).`n`n%TestResult%"
-    }
-
-    $result = "| Policy | Status |`n"
-    $result += "| --- | --- |`n"
-    if ($standard) {
-        $result += "| Standard | $passResult |`n"
-    } else {
-        $result += "| Standard | $failResult |`n"
-    }
-    if ($strict) {
-        $result += "| Strict | $passResult |`n`n"
-    } else {
-        $result += "| Strict | $failResult |`n`n"
-    }
-
-    $result += "| Policy Name | Result |`n"
-    $result += "| --- | --- |`n"
-    foreach($item in $policies | Sort-Object -Property Identity){
-        if($item.Guid -in $resultPolicies.Guid){
-            $result += "| $($item.Identity) | $($passResult) |`n"
-        }else{
-            $result += "| $($item.Identity) | $($failResult) |`n"
-        }
+        $testResultMarkdown = "Your tenant does not have all the enabled anti-phish policies with the EnableMailboxIntelligence and EnableMailboxIntelligenceProtection enabled ($portalLink).`n`n%TestResult%"
     }
 
     $testResultMarkdown = $testResultMarkdown -replace "%TestResult%", $result
@@ -85,4 +62,58 @@ function Test-MtCisaMailboxIntelligence {
     Add-MtTestResultDetail -Result $testResultMarkdown
 
     return $testResult
+
+
+
+
+
+
+    # $standard = $policies | Where-Object { `
+    #     $_.RecommendedPolicyType -eq "Standard"
+    # }
+
+    # $strict = $policies | Where-Object { `
+    #     $_.RecommendedPolicyType -eq "Strict"
+    # }
+
+    # $testResult = $standard -and $strict -and (($resultPolicies|Measure-Object).Count -ge 1)
+
+    # $portalLink = "https://security.microsoft.com/presetSecurityPolicies"
+    # $passResult = "✅ Pass"
+    # $failResult = "❌ Fail"
+
+    # if ($testResult) {
+    #     $testResultMarkdown = "Well done. Your tenant has [standard and strict preset security policies for the common file filter]($portalLink).`n`n%TestResult%"
+    # } else {
+    #     $testResultMarkdown = "Your tenant does not have [standard and strict preset security policies enabled]($portalLink).`n`n%TestResult%"
+    # }
+
+    # $result = "| Policy | Status |`n"
+    # $result += "| --- | --- |`n"
+    # if ($standard) {
+    #     $result += "| Standard | $passResult |`n"
+    # } else {
+    #     $result += "| Standard | $failResult |`n"
+    # }
+    # if ($strict) {
+    #     $result += "| Strict | $passResult |`n`n"
+    # } else {
+    #     $result += "| Strict | $failResult |`n`n"
+    # }
+
+    # $result += "| Policy Name | Result |`n"
+    # $result += "| --- | --- |`n"
+    # foreach($item in $policies | Sort-Object -Property Identity){
+    #     if($item.Guid -in $resultPolicies.Guid){
+    #         $result += "| $($item.Identity) | $($passResult) |`n"
+    #     }else{
+    #         $result += "| $($item.Identity) | $($failResult) |`n"
+    #     }
+    # }
+
+    # $testResultMarkdown = $testResultMarkdown -replace "%TestResult%", $result
+
+    # Add-MtTestResultDetail -Result $testResultMarkdown
+
+    # return $testResult
 }
