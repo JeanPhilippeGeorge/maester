@@ -21,65 +21,40 @@ function Test-MtCisaImpersonation {
     if (!(Test-MtConnection ExchangeOnline)) {
         Add-MtTestResultDetail -SkippedBecause NotConnectedExchange
         return $null
-    } elseif (!(Test-MtConnection SecurityCompliance)) {
-        Add-MtTestResultDetail -SkippedBecause NotConnectedSecurityCompliance
-        return $null
     } elseif ("P1" -notin (Get-MtLicenseInformation -Product MdoV2)) {
         Add-MtTestResultDetail -SkippedBecause NotLicensedMdoP1
         return $null
     }
 
-    $policies = Get-MtExo -Request AntiPhishPolicy
-
-    $resultPolicies = $policies | Where-Object { `
+    $policies = Get-MtExoThreatPolicyAntiPhish
+    $failingPolicies = $policies | Where-Object { `
         $_.Enabled -and `
-        $_.ImpersonationProtectionState -eq "Automatic" -and `
-        $_.EnableOrganizationDomainsProtection -and `
-        $_.EnableTargetedDomainsProtection -and `
-        $_.EnableTargetedUserProtection
+        -not ($_.ImpersonationProtectionState -eq "Automatic" -and $_.EnableOrganizationDomainsProtection -and $_.EnableTargetedDomainsProtection -and $_.EnableTargetedUserProtection)
     }
+    $testResult = ($failingPolicies | Measure-Object).Count -eq 0
 
-    $standard = $policies | Where-Object { `
-        $_.RecommendedPolicyType -eq "Standard"
+    $portalLink = "https://security.microsoft.com/antiphishing"
+    $passResult = "✅&nbsp;Pass"
+    $failResult = "❌&nbsp;Fail"
+    $skipResult = "🗄️&nbsp;Skip"
+
+    $result = "| Policy name | Enabled | Impersonation Protection State | Enable Organization Domains Protection | Enable Targeted Domains Protection | Enable Targeted User Protection | Result |`n"
+    $result += "| --- | --- | --- | --- | --- | --- | --- |`n"
+    foreach ($item in $policies) {
+        $itemResult = if (-not $item.IsEnabled) {
+            $skipResult
+        } elseif (($item.ImpersonationProtectionState -eq "Automatic") -and $item.EnableOrganizationDomainsProtection -and $item.EnableTargetedDomainsProtection -and $item.EnableTargetedUserProtection) {
+            $passResult
+        } else {
+            $failResult
+        }
+        $result += "| $($item.Identity) | $($item.IsEnabled) | $($item.ImpersonationProtectionState) | $($item.EnableOrganizationDomainsProtection) | $($item.EnableTargetedDomainsProtection) | $($_.EnableTargetedUserProtection) | $itemResult |`n"
     }
-
-    $strict = $policies | Where-Object { `
-        $_.RecommendedPolicyType -eq "Strict"
-    }
-
-    $testResult = $standard -and $strict -and (($resultPolicies|Measure-Object).Count -ge 1)
-
-    $portalLink = "https://security.microsoft.com/presetSecurityPolicies"
-    $passResult = "✅ Pass"
-    $failResult = "❌ Fail"
 
     if ($testResult) {
-        $testResultMarkdown = "Well done. Your tenant has [standard and strict preset security policies for the common file filter]($portalLink).`n`n%TestResult%"
+        $testResultMarkdown = "Well done. All the enabled anti-phish policies in your tenant have the ImpersonationProtectionState set to automatic and EnableOrganizationDomainsProtection and EnableTargetedDomainsProtection and EnableTargetedUserProtection enabled ($portalLink).`n`n%TestResult%"
     } else {
-        $testResultMarkdown = "Your tenant does not have [standard and strict preset security policies enabled]($portalLink).`n`n%TestResult%"
-    }
-
-    $result = "| Policy | Status |`n"
-    $result += "| --- | --- |`n"
-    if ($standard) {
-        $result += "| Standard | $passResult |`n"
-    } else {
-        $result += "| Standard | $failResult |`n"
-    }
-    if ($strict) {
-        $result += "| Strict | $passResult |`n`n"
-    } else {
-        $result += "| Strict | $failResult |`n`n"
-    }
-
-    $result += "| Policy Name | Result |`n"
-    $result += "| --- | --- |`n"
-    foreach($item in $policies | Sort-Object -Property Identity){
-        if($item.Guid -in $resultPolicies.Guid){
-            $result += "| $($item.Identity) | $($passResult) |`n"
-        }else{
-            $result += "| $($item.Identity) | $($failResult) |`n"
-        }
+        $testResultMarkdown = "Your tenant does not have all the enabled anti-phish policies with the ImpersonationProtectionState set to automatic and EnableOrganizationDomainsProtection and EnableTargetedDomainsProtection and EnableTargetedUserProtection enabled ($portalLink).`n`n%TestResult%"
     }
 
     $testResultMarkdown = $testResultMarkdown -replace "%TestResult%", $result
@@ -87,4 +62,63 @@ function Test-MtCisaImpersonation {
     Add-MtTestResultDetail -Result $testResultMarkdown
 
     return $testResult
+
+    # $policies = Get-MtExo -Request AntiPhishPolicy
+
+    # $resultPolicies = $policies | Where-Object { `
+    #     $_.Enabled -and `
+    #     $_.ImpersonationProtectionState -eq "Automatic" -and `
+    #     $_.EnableOrganizationDomainsProtection -and `
+    #     $_.EnableTargetedDomainsProtection -and `
+    #     $_.EnableTargetedUserProtection
+    # }
+
+    # $standard = $policies | Where-Object { `
+    #     $_.RecommendedPolicyType -eq "Standard"
+    # }
+
+    # $strict = $policies | Where-Object { `
+    #     $_.RecommendedPolicyType -eq "Strict"
+    # }
+
+    # $testResult = $standard -and $strict -and (($resultPolicies|Measure-Object).Count -ge 1)
+
+    # $portalLink = "https://security.microsoft.com/presetSecurityPolicies"
+    # $passResult = "✅ Pass"
+    # $failResult = "❌ Fail"
+
+    # if ($testResult) {
+    #     $testResultMarkdown = "Well done. Your tenant has [standard and strict preset security policies for the common file filter]($portalLink).`n`n%TestResult%"
+    # } else {
+    #     $testResultMarkdown = "Your tenant does not have [standard and strict preset security policies enabled]($portalLink).`n`n%TestResult%"
+    # }
+
+    # $result = "| Policy | Status |`n"
+    # $result += "| --- | --- |`n"
+    # if ($standard) {
+    #     $result += "| Standard | $passResult |`n"
+    # } else {
+    #     $result += "| Standard | $failResult |`n"
+    # }
+    # if ($strict) {
+    #     $result += "| Strict | $passResult |`n`n"
+    # } else {
+    #     $result += "| Strict | $failResult |`n`n"
+    # }
+
+    # $result += "| Policy Name | Result |`n"
+    # $result += "| --- | --- |`n"
+    # foreach($item in $policies | Sort-Object -Property Identity){
+    #     if($item.Guid -in $resultPolicies.Guid){
+    #         $result += "| $($item.Identity) | $($passResult) |`n"
+    #     }else{
+    #         $result += "| $($item.Identity) | $($failResult) |`n"
+    #     }
+    # }
+
+    # $testResultMarkdown = $testResultMarkdown -replace "%TestResult%", $result
+
+    # Add-MtTestResultDetail -Result $testResultMarkdown
+
+    # return $testResult
 }
