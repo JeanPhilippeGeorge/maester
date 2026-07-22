@@ -81,12 +81,15 @@
             '_2' = 'Large + small letters'
             '_3' = 'Large + small + numbers'
             '_4' = 'Large + small + numbers + special'
-            '_8' = 'Large + small + numbers + special (improved)'
+            '_5' = 'Large + small + numbers + special (improved readability)'
+            '_6' = 'Passphrase (long words)'
+            '_7' = 'Passphrase (short words)'
+            '_8' = 'Passphrase (short words with unique prefixes)'
         }
 
         # Pass-criteria thresholds
         $minPasswordLength = 14
-        $minComplexitySuffixes = @('_4', '_8')   # 4-class or improved 4-class
+        $minComplexitySuffixes = @('_4', '_5', '_6', '_7', '_8')   # 4-class, improved 4-class, passphrases
         $validPostAuthSuffixes = @('_1', '_3', '_5', '_11')
 
         $policyResults = [System.Collections.Generic.List[hashtable]]::new()
